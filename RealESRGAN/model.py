@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import torch
-from huggingface_hub import cached_download, hf_hub_url
 from PIL import Image
 
 from .rrdbnet_arch import RRDBNet
@@ -12,6 +11,8 @@ from .utils import (
     stich_together,
     unpad_image,
 )
+from huggingface_hub import hf_hub_download
+
 
 HF_MODELS = {
     2: dict(
@@ -49,18 +50,17 @@ class RealESRGAN:
                 4,
                 8,
             ], "You can download models only with scales: 2, 4, 8"
-            config = HF_MODELS[self.scale]
-            cache_dir = os.path.dirname(model_path)
-            local_filename = os.path.basename(model_path)
-            config_file_url = hf_hub_url(
-                repo_id=config["repo_id"], filename=config["filename"]
-            )
-            cached_download(
-                config_file_url, cache_dir=cache_dir, force_filename=local_filename
-            )
-            print("Weights downloaded to:", os.path.join(cache_dir, local_filename))
 
-        loadnet = torch.load(model_path)
+            config = HF_MODELS[self.scale]
+            local_file = hf_hub_download(
+                repo_id=config["repo_id"],
+                filename=config["filename"],
+                cache_dir=os.path.dirname(model_path),
+                local_dir=None,
+            )
+            print("Weights downloaded to:", local_file)
+
+        loadnet = torch.load(model_path, map_location=self.device)
         if "params" in loadnet:
             self.model.load_state_dict(loadnet["params"], strict=True)
         elif "params_ema" in loadnet:
